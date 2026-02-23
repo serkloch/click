@@ -1,0 +1,15 @@
+{
+  "session_id": "20260223_160906",
+  "total_clicks": 21,
+  "start_time": 1771852146.9328966,
+  "duration": 5.001476526260376,
+  "clicks_per_minute": {
+    "0": 21
+  },
+  "button_stats": {
+    "left": 11,
+    "right": 5,
+    "middle": 5
+  },
+  "timestamp": "2026-02-23T16:09:11.934378"
+}
