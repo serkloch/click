@@ -63,7 +63,7 @@ class ClickCounterApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Click Counter & Analyzer")
-        self.root.geometry("500x600")
+        self.root.geometry("500x650")  # немного увеличил высоту для новой статистики
         self.root.resizable(False, False)
         
         # Переменные сессии
@@ -71,13 +71,13 @@ class ClickCounterApp:
         self.is_counting = False
         self.mouse_listener = None
         
-        # Список сохранённых сессий (для быстрого доступа)
+        # Список сохранённых сессий и папка для них
         self.sessions_list = []
-        self.load_sessions_list()
-        
-        # Создание папки для сессий
         self.sessions_dir = "sessions"
         os.makedirs(self.sessions_dir, exist_ok=True)
+        
+        # Загружаем список существующих сессий
+        self.load_sessions_list()
         
         # Интерфейс
         self.create_widgets()
@@ -134,6 +134,35 @@ class ClickCounterApp:
         
         self.cps_label = ttk.Label(stats_frame, text="Кликов в секунду: 0.0", font=("Arial", 11))
         self.cps_label.grid(row=3, column=0, pady=5, sticky=tk.W)
+        
+        # Статистика по кнопкам мыши
+        buttons_frame = ttk.LabelFrame(self.session_tab, text="По кнопкам", padding="10")
+        buttons_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        # Создаём три метки для каждой кнопки
+        button_row = ttk.Frame(buttons_frame)
+        button_row.pack(fill=tk.X)
+        
+        # Левая кнопка
+        left_frame = ttk.Frame(button_row)
+        left_frame.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
+        ttk.Label(left_frame, text="🖱️ Левая", font=("Arial", 10)).pack()
+        self.left_label = ttk.Label(left_frame, text="0", font=("Arial", 12, "bold"), foreground="#2ecc71")
+        self.left_label.pack()
+        
+        # Правая кнопка
+        right_frame = ttk.Frame(button_row)
+        right_frame.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
+        ttk.Label(right_frame, text="🖱️ Правая", font=("Arial", 10)).pack()
+        self.right_label = ttk.Label(right_frame, text="0", font=("Arial", 12, "bold"), foreground="#e74c3c")
+        self.right_label.pack()
+        
+        # Средняя кнопка
+        middle_frame = ttk.Frame(button_row)
+        middle_frame.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
+        ttk.Label(middle_frame, text="🖱️ Средняя", font=("Arial", 10)).pack()
+        self.middle_label = ttk.Label(middle_frame, text="0", font=("Arial", 12, "bold"), foreground="#f39c12")
+        self.middle_label.pack()
         
         # Кнопки управления
         control_frame = ttk.Frame(self.session_tab)
@@ -264,6 +293,11 @@ class ClickCounterApp:
         # Очистка текстового поля истории
         self.history_text.delete(1.0, tk.END)
         
+        # Сброс счётчиков кнопок на 0
+        self.left_label.config(text="0")
+        self.right_label.config(text="0")
+        self.middle_label.config(text="0")
+        
         # Запуск слушателя мыши, если доступно
         if PYNPUT_AVAILABLE:
             self.mouse_listener = mouse.Listener(on_click=self.on_click)
@@ -345,6 +379,11 @@ class ClickCounterApp:
         if elapsed > 0:
             cps = self.current_session.total_clicks / elapsed
             self.cps_label.config(text=f"Кликов в секунду: {cps:.2f}")
+        
+        # Обновление статистики по кнопкам
+        self.left_label.config(text=str(self.current_session.button_stats.get('left', 0)))
+        self.right_label.config(text=str(self.current_session.button_stats.get('right', 0)))
+        self.middle_label.config(text=str(self.current_session.button_stats.get('middle', 0)))
     
     def update_clock(self):
         if self.is_counting:
@@ -389,6 +428,20 @@ class ClickCounterApp:
         graph_win.geometry("800x600")
         graph_win.minsize(600, 400)
         
+        # Верхняя панель с общей информацией
+        info_frame = ttk.Frame(graph_win)
+        info_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        total_clicks = data.get('total_clicks', 0)
+        button_stats = data.get('button_stats', {})
+        
+        # Информация о сессии
+        info_text = f"Всего кликов: {total_clicks}  |  "
+        info_text += f"ЛКМ: {button_stats.get('left', 0)}  |  "
+        info_text += f"ПКМ: {button_stats.get('right', 0)}  |  "
+        info_text += f"СКМ: {button_stats.get('middle', 0)}"
+        ttk.Label(info_frame, text=info_text, font=("Arial", 10)).pack()
+        
         # Фрейм для графика
         fig = Figure(figsize=(8, 5), dpi=100)
         ax = fig.add_subplot(111)
@@ -421,21 +474,19 @@ class ClickCounterApp:
         canvas.draw()
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
-        # Статистика
+        # Статистика внизу
         stats_frame = ttk.Frame(graph_win)
         stats_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        total_clicks = data.get('total_clicks', 0)
         duration = len(clicks_data)
         avg_cpm = total_clicks / duration if duration > 0 else 0
         max_cpm = max(clicks) if clicks else 0
         
-        ttk.Label(stats_frame, text=f"Всего кликов: {total_clicks}").pack(side=tk.LEFT, padx=10)
         ttk.Label(stats_frame, text=f"Среднее в минуту: {avg_cpm:.1f}").pack(side=tk.LEFT, padx=10)
         ttk.Label(stats_frame, text=f"Максимум в минуту: {max_cpm}").pack(side=tk.LEFT, padx=10)
         
         # Кнопка закрытия
-        ttk.Button(graph_win, text="Закрыть", command=graph_win.destroy).pack(pady=10)
+        ttk.Button(graph_win, text="Закрыть", command=graph_win.destroy).pack(pady=5)
     
     def on_closing(self):
         if self.is_counting:
